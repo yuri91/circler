@@ -11,35 +11,48 @@
         pkgs = nixpkgs.legacyPackages.${system};
         
         # Example packages that form a dependency graph
-        packageA = pkgs.stdenv.mkDerivation {
-          name = "package-a";
-          src = ./src/package-a;
-          buildPhase = "echo 'Building package A' && sleep 2";
-          installPhase = "mkdir -p $out && echo 'Package A built' > $out/result";
-        };
+        packageA = pkgs.runCommand "package-a" {} ''
+          echo "Building package A (independent)"
+          sleep 2
+          mkdir -p $out
+          echo "Package A built successfully" > $out/result
+          echo "Build timestamp: $(date)" >> $out/result
+        '';
         
-        packageB = pkgs.stdenv.mkDerivation {
-          name = "package-b";
-          src = ./src/package-b;
-          buildInputs = [ packageA ];
-          buildPhase = "echo 'Building package B (depends on A)' && sleep 3";
-          installPhase = "mkdir -p $out && echo 'Package B built' > $out/result";
-        };
+        packageB = pkgs.runCommand "package-b" { 
+          buildInputs = [ packageA ]; 
+        } ''
+          echo "Building package B (depends on A)"
+          echo "Package A output: ${packageA}"
+          sleep 3
+          mkdir -p $out
+          echo "Package B built successfully" > $out/result
+          echo "Dependency: ${packageA}/result" >> $out/result
+          echo "Build timestamp: $(date)" >> $out/result
+        '';
         
-        packageC = pkgs.stdenv.mkDerivation {
-          name = "package-c";
-          src = ./src/package-c;
-          buildPhase = "echo 'Building package C (independent)' && sleep 1";
-          installPhase = "mkdir -p $out && echo 'Package C built' > $out/result";
-        };
+        packageC = pkgs.runCommand "package-c" {} ''
+          echo "Building package C (independent)"
+          sleep 1
+          mkdir -p $out
+          echo "Package C built successfully" > $out/result
+          echo "Build timestamp: $(date)" >> $out/result
+        '';
         
-        packageD = pkgs.stdenv.mkDerivation {
-          name = "package-d";
-          src = ./src/package-d;
-          buildInputs = [ packageB packageC ];
-          buildPhase = "echo 'Building package D (depends on B and C)' && sleep 2";
-          installPhase = "mkdir -p $out && echo 'Package D built' > $out/result";
-        };
+        packageD = pkgs.runCommand "package-d" { 
+          buildInputs = [ packageB packageC ]; 
+        } ''
+          echo "Building package D (depends on B and C)"
+          echo "Package B output: ${packageB}"
+          echo "Package C output: ${packageC}"
+          sleep 2
+          mkdir -p $out
+          echo "Package D built successfully" > $out/result
+          echo "Dependencies:" >> $out/result
+          echo "  B: ${packageB}/result" >> $out/result
+          echo "  C: ${packageC}/result" >> $out/result
+          echo "Build timestamp: $(date)" >> $out/result
+        '';
 
         # Tool for analyzing derivations and generating CircleCI config
         circleci-nix-generator = pkgs.writeScriptBin "circleci-nix-generator" ''
