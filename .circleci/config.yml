@@ -1,0 +1,57 @@
+version: 2.1
+
+# Setup workflow that evaluates Nix and generates dynamic configuration
+jobs:
+  setup:
+    docker:
+      - image: nixos/nix:latest
+    resource_class: small
+    steps:
+      - checkout
+      - run:
+          name: Enable Nix flakes
+          command: |
+            echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+      - run:
+          name: Install dependencies
+          command: |
+            nix profile install nixpkgs#python3
+            nix profile install nixpkgs#python3Packages.pyyaml
+      - run:
+          name: Evaluate Nix expressions and build dependency graph
+          command: |
+            # Show all available packages
+            echo "=== Available packages in flake ==="
+            nix flake show --json . | python3 -m json.tool
+            
+            # Run the advanced derivation analyzer
+            echo "=== Analyzing derivations and generating configuration ==="
+            python3 scripts/analyze-derivations.py
+      - run:
+          name: Validate generated configuration
+          command: |
+            echo "=== Validating generated dynamic configuration ==="
+            if [ -f /tmp/continuation-config.yml ]; then
+              cat /tmp/continuation-config.yml
+              echo "Configuration file generated successfully"
+            else
+              echo "Error: Configuration file not generated"
+              exit 1
+            fi
+      - run:
+          name: Continue with dynamic configuration
+          command: |
+            # Install CircleCI CLI for continuation
+            curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | bash
+            
+            # Continue the pipeline with the generated configuration
+            echo "Continuing pipeline with dynamic configuration..."
+            /usr/local/bin/circleci config process /tmp/continuation-config.yml
+            
+            # This would normally continue the pipeline, but we'll just show the config for demo
+            echo "In a real setup, this would trigger the dynamic workflows"
+
+workflows:
+  setup-dynamic-config:
+    jobs:
+      - setup
