@@ -127,15 +127,19 @@ class NixDerivationAnalyzer:
                 {
                     "run": {
                         "name": "Install Nix",
-                        "command": """curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --extra-conf "experimental-features = nix-command flakes" --no-confirm
-echo 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV"""
+                        "command": """curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \\
+  --extra-conf "experimental-features = nix-command flakes" \\
+  --no-confirm \\
+  --init none \\
+  --no-start-daemon
+echo '. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV"""
                     }
                 },
                 {
                     "run": {
                         "name": f"Build {package_name}",
                         "command": f"""
-source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 echo "Building {package_name}"
 echo "Dependencies: {', '.join(dependencies) if dependencies else 'none'}"
 nix build .#{package_name} -L
@@ -207,15 +211,19 @@ echo "Build completed successfully"
                     {
                         "run": {
                             "name": "Install Nix",
-                            "command": """curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --extra-conf "experimental-features = nix-command flakes" --no-confirm
-echo 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV"""
+                            "command": """curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \\
+  --extra-conf "experimental-features = nix-command flakes" \\
+  --no-confirm \\
+  --init none \\
+  --no-start-daemon
+echo '. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV"""
                         }
                     },
                     {
                         "run": {
                             "name": "Run integration tests",
                             "command": """
-source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 echo "Running integration tests..."
 nix build .#default -L
 echo "All packages integrated successfully!"

@@ -8,6 +8,32 @@
 
 **Solution**: Switched to Ubuntu-based approach for better CircleCI compatibility:
 
+### Fixed Nix Installation Issues in CircleCI
+
+**Problem**: The Determinate Systems Nix installer was failing with systemd errors:
+```
+systemd was not active.
+If it will be started later consider, passing `--no-start-daemon`.
+To use a `root`-only Nix install, consider passing `--init none`.
+Exited with code exit status 1
+```
+
+**Solution**: Added CircleCI-compatible installation flags:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
+  --extra-conf "experimental-features = nix-command flakes" \
+  --no-confirm \
+  --init none \
+  --no-start-daemon
+```
+
+**Key Flags**:
+- `--init none`: Skips systemd integration (not available in CircleCI)
+- `--no-start-daemon`: Doesn't attempt to start the Nix daemon 
+- `--no-confirm`: Non-interactive installation
+- Uses single-user installation mode compatible with CI environments
+
 #### Changes Made:
 
 1. **Setup Job** (`.circleci/config.yml`):

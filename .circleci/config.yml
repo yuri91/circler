@@ -11,25 +11,29 @@ jobs:
       - run:
           name: Install Nix
           command: |
-            # Install Nix using the determinate systems installer
-            curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --extra-conf "experimental-features = nix-command flakes" --no-confirm
-            echo 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV
+            # Install Nix using the determinate systems installer with CircleCI-compatible options
+            curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
+              --extra-conf "experimental-features = nix-command flakes" \
+              --no-confirm \
+              --init none \
+              --no-start-daemon
+            echo '. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV
       - run:
           name: Verify Nix installation
           command: |
-            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
             nix --version
             nix flake show --help >/dev/null
       - run:
           name: Install Python dependencies
           command: |
-            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
             nix profile install nixpkgs#python3
             nix profile install nixpkgs#python3Packages.pyyaml
       - run:
           name: Evaluate Nix expressions and build dependency graph
           command: |
-            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
             # Show all available packages
             echo "=== Available packages in flake ==="
             nix flake show --json . | python3 -m json.tool
