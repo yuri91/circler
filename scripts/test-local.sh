@@ -26,7 +26,7 @@ fi
 # Test dependency analyzer
 echo ""
 echo "🔍 Testing dependency analyzer..."
-if python3 scripts/analyze-derivations.py > /tmp/test-output.yml; then
+if nix run .#analyze-derivations > /tmp/test-output.yml; then
     echo "✅ Dependency analysis successful"
     echo "Generated configuration:"
     head -20 /tmp/test-output.yml

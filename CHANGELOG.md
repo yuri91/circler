@@ -72,6 +72,34 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 
 The integration now uses a more reliable foundation while maintaining all the original functionality of automatic dependency analysis and dynamic workflow generation.
 
+### Improved Dependency Management
+
+**Enhancement**: Replaced `nix profile install` with flake-based dependency management using `nix run`.
+
+**Previous Approach**:
+```bash
+nix profile install nixpkgs#python3
+nix profile install nixpkgs#python3Packages.pyyaml
+python3 scripts/analyze-derivations.py
+```
+
+**New Approach**:
+```bash
+nix run .#analyze-derivations
+```
+
+**Benefits**:
+- ✅ **Guaranteed Dependencies**: All Python dependencies (including PyYAML) are automatically available
+- ✅ **No Profile Pollution**: Doesn't install packages into user/global profiles
+- ✅ **Reproducible**: Exact same environment every time
+- ✅ **Isolation**: Each execution gets clean dependency environment
+- ✅ **Faster**: No need for separate package installation steps
+
+**Technical Details**:
+- Added `analyze-derivations` package to flake with `python3.withPackages (ps: [ps.pyyaml])`
+- CircleCI setup job now uses `nix run .#analyze-derivations` instead of installing dependencies separately
+- Removed need for virtual environments in local development
+
 ## Package Simplification
 
 ### Converted from `stdenv.mkDerivation` to `runCommand`

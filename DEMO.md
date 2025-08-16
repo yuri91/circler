@@ -35,14 +35,13 @@ Package C (independent) ────┘
 
 ## Testing the Demo
 
-### Local Testing (Offline)
+### Local Testing
 ```bash
-# Install dependencies
-python3 -m venv venv
-source venv/bin/activate
-pip install pyyaml
+# Test the analyzer (uses Nix for all dependencies)
+nix run .#analyze-derivations
 
-# Test the analyzer
+# Or test the offline version in development shell
+nix develop
 python3 scripts/test-analyzer-offline.py
 ```
 

@@ -1,69 +1,47 @@
 version: 2.1
 
-# Setup workflow that evaluates Nix and generates dynamic configuration
+setup: true
+
+orbs:
+  continuation: circleci/continuation@1
+
 jobs:
   setup:
-    docker:
-      - image: cimg/base:stable
-    resource_class: small
+    executor: continuation/default
     steps:
       - checkout
       - run:
           name: Install Nix
           command: |
-            # Install Nix using the determinate systems installer with CircleCI-compatible options
-            curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux \
-              --extra-conf "experimental-features = nix-command flakes" \
-              --no-confirm \
-              --init none \
-              --no-start-daemon
-            echo '. /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV
-      - run:
-          name: Verify Nix installation
-          command: |
-            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-            nix --version
-            nix flake show --help >/dev/null
-      - run:
-          name: Install Python dependencies
-          command: |
-            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-            nix profile install nixpkgs#python3
-            nix profile install nixpkgs#python3Packages.pyyaml
+            cat \<< 'EOF' > /tmp/nix.conf
+              allowed-users = *
+              builders = 
+              builders-use-substitutes = true
+              cores = 0
+              experimental-features = nix-command flakes ca-derivations
+              keep-derivations = true
+              keep-outputs = true
+              max-jobs = auto
+              require-sigs = true
+              sandbox = false
+              sandbox-fallback = true
+              substituters = https://cache.nixos.org/
+              system-features = nixos-test benchmark big-parallel kvm
+              trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+              trusted-substituters = 
+              trusted-users = root circleci
+            EOF
+            sh <(curl -L https://nixos.org/nix/install) --no-daemon
+            sudo mkdir -p /etc/nix/
+            sudo mv /tmp/nix.conf /etc/nix/
+            echo 'export USER=circleci' >> $BASH_ENV
+            echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
       - run:
           name: Evaluate Nix expressions and build dependency graph
           command: |
-            . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-            # Show all available packages
-            echo "=== Available packages in flake ==="
-            nix flake show --json . | python3 -m json.tool
-            
-            # Run the advanced derivation analyzer
-            echo "=== Analyzing derivations and generating configuration ==="
-            python3 scripts/analyze-derivations.py
-      - run:
-          name: Validate generated configuration
-          command: |
-            echo "=== Validating generated dynamic configuration ==="
-            if [ -f /tmp/continuation-config.yml ]; then
-              cat /tmp/continuation-config.yml
-              echo "Configuration file generated successfully"
-            else
-              echo "Error: Configuration file not generated"
-              exit 1
-            fi
-      - run:
-          name: Continue with dynamic configuration
-          command: |
-            # Install CircleCI CLI for continuation
-            curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | sudo bash
-            
-            # Continue the pipeline with the generated configuration
-            echo "Continuing pipeline with dynamic configuration..."
-            circleci config process /tmp/continuation-config.yml
-            
-            # This would normally continue the pipeline, but we'll just show the config for demo
-            echo "In a real setup, this would trigger the dynamic workflows"
+            nix build .#config
+      - continuation/continue:
+          configuration_path: result
 
 workflows:
   setup-dynamic-config:

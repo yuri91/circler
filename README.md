@@ -64,17 +64,24 @@ This demo includes four example packages with the following dependency structure
 
 ### Local Development
 
-1. **Enter development shell**:
+1. **Generate CircleCI config using pure Nix** (no external dependencies):
+   ```bash
+   nix run .#generate-continuation-config
+   # or
+   nix build .#continuation-config && cat result
+   ```
+
+2. **Test the Python-based analyzer** (with all dependencies managed by Nix):
+   ```bash
+   nix run .#analyze-derivations
+   ```
+
+3. **Enter development shell** (optional):
    ```bash
    nix develop
    ```
 
-2. **Test the dependency analyzer**:
-   ```bash
-   python3 scripts/analyze-derivations.py
-   ```
-
-3. **Build individual packages**:
+4. **Build individual packages**:
    ```bash
    nix build .#packageA
    nix build .#packageB
@@ -82,7 +89,7 @@ This demo includes four example packages with the following dependency structure
    nix build .#packageD
    ```
 
-4. **Build all packages**:
+5. **Build all packages**:
    ```bash
    nix build .#default
    ```

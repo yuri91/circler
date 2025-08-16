@@ -6,6 +6,8 @@ result-*
 __pycache__/
 *.pyc
 *.pyo
+
+# No longer needed - Nix manages dependencies
 /venv
 
 # CircleCI local builds
