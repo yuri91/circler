@@ -41,6 +41,8 @@ jobs:
       - run:
           name: Continue with dynamic configuration
           command: |
+            # add missing fhs paths
+            mkdir -p /usr/local/bin
             # Install CircleCI CLI for continuation
             curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | bash
             
