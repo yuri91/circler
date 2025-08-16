@@ -91,7 +91,7 @@
               for package, deps in dependency_graph.items():
                   job_name = f"build-{package}"
                   jobs[job_name] = {
-                      "docker": [{"image": "nixos/nix:latest"}],
+                      "docker": [{"image": "cimg/base:stable"}],
                       "steps": [
                           "checkout",
                           {"run": {"command": f"nix build .#{package}"}},

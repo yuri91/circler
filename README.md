@@ -91,14 +91,16 @@ This demo includes four example packages with the following dependency structure
 
 The CircleCI integration automatically:
 
-1. **Setup Job**: 
-   - Installs Nix and dependencies
-   - Evaluates the flake
-   - Runs dependency analysis
+1. **Setup Job** (Ubuntu + Nix): 
+   - Uses `cimg/base:stable` Ubuntu base image
+   - Installs Nix using Determinate Systems installer
+   - Installs Python dependencies via Nix
+   - Evaluates the flake and runs dependency analysis
    - Generates dynamic configuration
 
 2. **Dynamic Workflows**:
-   - Creates jobs for each package
+   - Creates jobs for each package using Ubuntu base images
+   - Each job installs Nix individually for isolation
    - Sets up proper dependency relationships
    - Enables parallel builds where possible
    - Includes caching for efficiency
@@ -108,6 +110,7 @@ The CircleCI integration automatically:
    - Package B waits for A to complete
    - Package D waits for both B and C
    - Integration tests run after all packages
+   - All jobs use reliable Ubuntu + Nix installation
 
 ### Key Features
 

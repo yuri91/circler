@@ -84,20 +84,32 @@ The analyzer generates CircleCI configuration like this:
 version: 2.1
 jobs:
   build-packagea:
-    docker: [image: nixos/nix:latest]
-    steps: [checkout, run: nix build .#packageA]
+    docker: [image: cimg/base:stable]
+    steps: 
+      - checkout
+      - run: curl -sSf https://install.determinate.systems/nix | sh
+      - run: nix build .#packageA
   
   build-packagec: 
-    docker: [image: nixos/nix:latest]
-    steps: [checkout, run: nix build .#packageC]
+    docker: [image: cimg/base:stable]
+    steps: 
+      - checkout  
+      - run: curl -sSf https://install.determinate.systems/nix | sh
+      - run: nix build .#packageC
     
   build-packageb:
-    docker: [image: nixos/nix:latest] 
-    steps: [checkout, run: nix build .#packageB]
+    docker: [image: cimg/base:stable] 
+    steps: 
+      - checkout
+      - run: curl -sSf https://install.determinate.systems/nix | sh
+      - run: nix build .#packageB
     
   build-packaged:
-    docker: [image: nixos/nix:latest]
-    steps: [checkout, run: nix build .#packageD]
+    docker: [image: cimg/base:stable]
+    steps: 
+      - checkout
+      - run: curl -sSf https://install.determinate.systems/nix | sh
+      - run: nix build .#packageD
 
 workflows:
   build-dependency-graph:

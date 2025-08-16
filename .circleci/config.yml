@@ -4,22 +4,32 @@ version: 2.1
 jobs:
   setup:
     docker:
-      - image: nixos/nix:latest
+      - image: cimg/base:stable
     resource_class: small
     steps:
       - checkout
       - run:
-          name: Enable Nix flakes
+          name: Install Nix
           command: |
-            echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
+            # Install Nix using the determinate systems installer
+            curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install linux --extra-conf "experimental-features = nix-command flakes" --no-confirm
+            echo 'source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' >> $BASH_ENV
       - run:
-          name: Install dependencies
+          name: Verify Nix installation
           command: |
+            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            nix --version
+            nix flake show --help >/dev/null
+      - run:
+          name: Install Python dependencies
+          command: |
+            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
             nix profile install nixpkgs#python3
             nix profile install nixpkgs#python3Packages.pyyaml
       - run:
           name: Evaluate Nix expressions and build dependency graph
           command: |
+            source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
             # Show all available packages
             echo "=== Available packages in flake ==="
             nix flake show --json . | python3 -m json.tool
@@ -41,14 +51,12 @@ jobs:
       - run:
           name: Continue with dynamic configuration
           command: |
-            # add missing fhs paths
-            mkdir -p /usr/local/bin
             # Install CircleCI CLI for continuation
-            curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | bash
+            curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/master/install.sh | sudo bash
             
             # Continue the pipeline with the generated configuration
             echo "Continuing pipeline with dynamic configuration..."
-            /usr/local/bin/circleci config process /tmp/continuation-config.yml
+            circleci config process /tmp/continuation-config.yml
             
             # This would normally continue the pipeline, but we'll just show the config for demo
             echo "In a real setup, this would trigger the dynamic workflows"
