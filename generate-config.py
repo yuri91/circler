@@ -67,12 +67,26 @@ ls -la result*
         ]
     }
     if drv.deps:
-        cache_step = {
-            "restore_cache": {
-                "keys": [f"nix-store-{dep.path.split('/')[-1]}" for dep in drv.deps]
-            }
-        }
-        job["steps"] = job["steps"][:2] + [cache_step] + job["steps"][2:]
+        cache_steps = [
+            {
+                "run": {
+                    "name": "Make nix store writable for cache restore",
+                    "command": "sudo chmod -R u+w /nix/store || true"
+                }
+            },
+            {
+                "restore_cache": {
+                    "keys": [f"nix-store-{dep.path.split('/')[-1]}" for dep in drv.deps]
+                }
+            },
+            {
+                "run": {
+                    "name": "Undo writable nix store",
+                    "command": "sudo chmod -R 555 /nix/store && sudo chmod 777 /nix/store"
+                }
+            },
+        ]
+        job["steps"] = job["steps"][:2] + cache_steps + job["steps"][2:]
     return job
 
 
