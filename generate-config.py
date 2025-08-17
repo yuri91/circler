@@ -50,39 +50,53 @@ echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
                 }
             },
             {
-                "run": {
-                    "name": "Make nix store writable for cache restore",
-                    "command": "sudo chmod -R u+w /nix/store || true"
-                }
-            },
-            {
                 "restore_cache": {
-                    "keys": ["<< pipeline.parameters.eval-cache-key >>"] + [f"nix-store-{dep.drv.split('/')[-1]}" for dep in drv.deps]
+                    "keys": ["<< pipeline.parameters.eval-cache-key >>"]
                 }
             },
             {
                 "run": {
-                    "name": "Undo writable nix store",
-                    "command": "sudo chmod -R 555 /nix/store && sudo chmod 777 /nix/store"
+                    "name": "Import NARs",
+                    "command": f"""
+for nar in nars/*.nar; do
+    nix-store --import < "$nar"
+done
+"""
                 }
             },
             {
                 "run": {
                     "name": f"Build {drv.name}",
                     "command": f"""
-nix-store --realize {drv.drv}
-ls -la result*
+nix-store --add-root result --realize {drv.drv}
+"""
+                }
+            },
+            {
+                "run": {
+                    "name": f"Export NAR",
+                    "command": f"""
+mkdir -p nars
+nix-store --export result > nars/{drv.name}.nar
 """
                 }
             },
             {
                 "save_cache": {
                     "key": f"nix-store-{drv.drv.split('/')[-1]}",
-                    "paths": ["/nix/store"],
+                    "paths": ["nars"],
                 }
             },
         ]
     }
+    cache_steps = []
+    for dep in drv.deps:
+        cache_steps.append({
+            "restore_cache": {
+                "keys": [f"nix-store-{dep.drv.split('/')[-1]}"]
+            },
+        })
+    job["steps"] = job["steps"][:3] + cache_steps + job["steps"][3:]
     return job
 
 
