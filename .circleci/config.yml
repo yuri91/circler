@@ -7,22 +7,18 @@ orbs:
 
 jobs:
   setup:
-    executor: continuation/default
+    docker:
+      - image: nixos/nix:latest
+    resource_class: small
     steps:
       - checkout
       - run:
-          name: Install Nix
+          name: Configure Nix
           command: |
-            cat \<< 'EOF' > /tmp/nix.conf
-              allowed-users = *
-              builders = 
-              builders-use-substitutes = true
+            cat \<< 'EOF' > /etc/nix/nix.conf
               cores = 0
               experimental-features = nix-command flakes ca-derivations
-              keep-derivations = true
-              keep-outputs = true
               max-jobs = auto
-              require-sigs = true
               sandbox = false
               sandbox-fallback = true
               substituters = https://cache.nixos.org/
@@ -31,13 +27,12 @@ jobs:
               trusted-substituters = 
               trusted-users = root circleci
             EOF
-            sh <(curl -L https://nixos.org/nix/install) --no-daemon
-            sudo mkdir -p /etc/nix/
-            sudo mv /tmp/nix.conf /etc/nix/
-            echo 'export USER=circleci' >> $BASH_ENV
-            echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
       - run:
-          name: Evaluate Nix expressions and build dependency graph
+          name: Install utilities
+          command: |
+            nix profile install nixpkgs#jq nixpkgs#curl nixpkgs#which nixpkgs#xxd
+      - run:
+          name: Evaluate Build
           command: |
             nix build .#config
             mkdir -p nars
