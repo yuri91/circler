@@ -15,24 +15,18 @@ class Derivation:
 
 def generate_circleci_job(drv: Derivation) -> Dict:
     job = {
-        "docker": [{"image": "cimg/base:stable"}],
+        "docker": [{"image": "nixos/nix:latest"}],
         "resource_class": "medium",
         "steps": [
             "checkout",
             {
                 "run": {
-                    "name": "Install Nix",
+                    "name": "Configure Nix",
                     "command": """
-cat \\<< 'EOF' > /tmp/nix.conf
-  allowed-users = *
-  builders = 
-  builders-use-substitutes = true
+cat \\<< 'EOF' > /etc/nix/nix.conf
   cores = 0
   experimental-features = nix-command flakes ca-derivations
-  keep-derivations = true
-  keep-outputs = true
   max-jobs = auto
-  require-sigs = true
   sandbox = false
   sandbox-fallback = true
   substituters = https://cache.nixos.org/
@@ -41,11 +35,6 @@ cat \\<< 'EOF' > /tmp/nix.conf
   trusted-substituters = 
   trusted-users = root circleci
 EOF
-sh <(curl -L https://nixos.org/nix/install) --no-daemon
-sudo mkdir -p /etc/nix/
-sudo mv /tmp/nix.conf /etc/nix/
-echo 'export USER=circleci' >> $BASH_ENV
-echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
 """,
                 }
             },
