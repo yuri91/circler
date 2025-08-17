@@ -35,7 +35,7 @@
 
         packageC = pkgs.runCommand "package-c" { } ''
           echo "Building package C (independent)"
-          sleep 1
+          sleep 6
           mkdir -p $out
           echo "Package C built successfully" > $out/result
           echo "Build timestamp: $(date)" >> $out/result
@@ -70,8 +70,8 @@
             nativeBuildInputs = with pkgs; [ jq ];
           } ''
           for i in "''${!names[@]}"; do
-            deps=("''${paths[@]:0:$i}" "''${paths}[@]:$((i+1))")
-            jq ".\"graph-''${names[$i]}\" | [.[] | select(.path | IN(\$ARGS.positional[])) | .path] | {\"''${names[$i]}\": {deps:., path:\"''${paths[$i]}\", drv:\"''${drvs[$i]}\"}}" "$NIX_ATTRS_JSON_FILE" --args "''${deps[@]}" > "$i.json"
+            deps=("''${drvs[@]:0:$i}" "''${drvs}[@]:$((i+1))")
+            jq ".\"graph-''${names[$i]}\" | [.[] | select(.path | IN(\$ARGS.positional[])) | .path] | {\"''${names[$i]}\": {deps:., drv:\"''${drvs[$i]}\"}}" "$NIX_ATTRS_JSON_FILE" --args "''${deps[@]}" > "$i.json"
           done
           jq --slurp 'add' *.json > $out
         '';
@@ -92,6 +92,7 @@
           inherit packageA packageB packageC packageD;
           deps = collect-direct-deps { inherit packageA packageB packageC packageD; };
           config = make-config { inherit packageA packageB packageC packageD; };
+          all = pkgs.linkFarm "all" (pkgs.lib.mapAttrsToList (name: path: { inherit name path; }) { inherit packageA packageB packageC packageD; });
         };
 
         devShells.default = pkgs.mkShell {

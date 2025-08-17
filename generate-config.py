@@ -10,7 +10,6 @@ from typing import List, Dict
 @dataclass
 class Derivation:
     name: str
-    path: str
     drv: str
     deps: List[Derivation]
 
@@ -58,7 +57,7 @@ echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
             },
             {
                 "restore_cache": {
-                    "keys": ["<< pipeline.parameters.eval-cache-key >>"] + [f"nix-store-{dep.path.split('/')[-1]}" for dep in drv.deps]
+                    "keys": ["<< pipeline.parameters.eval-cache-key >>"] + [f"nix-store-{dep.drv.split('/')[-1]}" for dep in drv.deps]
                 }
             },
             {
@@ -78,7 +77,7 @@ ls -la result*
             },
             {
                 "save_cache": {
-                    "key": f"nix-store-{drv.path.split('/')[-1]}",
+                    "key": f"nix-store-{drv.drv.split('/')[-1]}",
                     "paths": ["/nix/store"],
                 }
             },
@@ -122,10 +121,10 @@ def generate_circleci_config(drvs: Dict[str, Derivation]) -> Dict:
 def load_derivations() -> Dict[str, Derivation]:
     graph = json.load(open(sys.argv[1], "r"))
 
-    drvs = { k:Derivation(name=k, path=v["path"], drv=v["drv"], deps=[]) for (k,v) in graph.items() }
-    pathMap = { v["path"]:drvs[k] for (k,v) in graph.items()}
+    drvs = { k:Derivation(name=k, drv=v["drv"], deps=[]) for (k,v) in graph.items() }
+    drvMap = { v["drv"]:drvs[k] for (k,v) in graph.items()}
     for (k,v) in drvs.items():
-        v.deps = [ pathMap[d] for d in graph[k]["deps"]]
+        v.deps = [ drvMap[d] for d in graph[k]["deps"]]
 
     return drvs
 
