@@ -11,6 +11,7 @@ from typing import List, Dict
 class Derivation:
     name: str
     path: str
+    drv: str
     deps: List[Derivation]
 
 def generate_circleci_job(drv: Derivation) -> Dict:
@@ -51,11 +52,28 @@ echo '. /home/circleci/.nix-profile/etc/profile.d/nix.sh' >> $BASH_ENV
             },
             {
                 "run": {
+                    "name": "Make nix store writable for cache restore",
+                    "command": "sudo chmod -R u+w /nix/store || true"
+                }
+            },
+            {
+                "restore_cache": {
+                    "keys": ["<< pipeline.parameters.eval-cache-key >>"] + [f"nix-store-{dep.path.split('/')[-1]}" for dep in drv.deps]
+                }
+            },
+            {
+                "run": {
+                    "name": "Undo writable nix store",
+                    "command": "sudo chmod -R 555 /nix/store && sudo chmod 777 /nix/store"
+                }
+            },
+            {
+                "run": {
                     "name": f"Build {drv.name}",
                     "command": f"""
-nix build .#{drv.name} -L
+nix-store --realize {drv.drv}
 ls -la result*
-                    """.strip()
+"""
                 }
             },
             {
@@ -66,27 +84,6 @@ ls -la result*
             },
         ]
     }
-    if drv.deps:
-        cache_steps = [
-            {
-                "run": {
-                    "name": "Make nix store writable for cache restore",
-                    "command": "sudo chmod -R u+w /nix/store || true"
-                }
-            },
-            {
-                "restore_cache": {
-                    "keys": [f"nix-store-{dep.path.split('/')[-1]}" for dep in drv.deps]
-                }
-            },
-            {
-                "run": {
-                    "name": "Undo writable nix store",
-                    "command": "sudo chmod -R 555 /nix/store && sudo chmod 777 /nix/store"
-                }
-            },
-        ]
-        job["steps"] = job["steps"][:2] + cache_steps + job["steps"][2:]
     return job
 
 
@@ -106,6 +103,12 @@ def generate_circleci_config(drvs: Dict[str, Derivation]) -> Dict:
 
     config = {
         "version": 2.1,
+        "parameters": {
+            "eval-cache-key": {
+                "type": "string",
+                "default": "",
+            },
+        },
         "jobs": jobs,
         "workflows": {
             "build-all": {
@@ -119,7 +122,7 @@ def generate_circleci_config(drvs: Dict[str, Derivation]) -> Dict:
 def load_derivations() -> Dict[str, Derivation]:
     graph = json.load(open(sys.argv[1], "r"))
 
-    drvs = { k:Derivation(name=k, path=v["path"], deps=[]) for (k,v) in graph.items() }
+    drvs = { k:Derivation(name=k, path=v["path"], drv=v["drv"], deps=[]) for (k,v) in graph.items() }
     pathMap = { v["path"]:drvs[k] for (k,v) in graph.items()}
     for (k,v) in drvs.items():
         v.deps = [ pathMap[d] for d in graph[k]["deps"]]

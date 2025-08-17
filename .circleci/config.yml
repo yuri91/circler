@@ -40,8 +40,15 @@ jobs:
           name: Evaluate Nix expressions and build dependency graph
           command: |
             nix build .#config
+            cp result /tmp/config
+            CHECKSUM=$(sha256sum result | xxd -r -p | base64 | tr '/' '_')
+            jq -n --arg cs "$CHECKSUM" '{"eval-cache-key": ("nix-store-" + $cs)}' > /tmp/params.json
+      - save_cache:
+          key: nix-store-{{ checksum "/tmp/config" }}
+          paths: ["/nix/store"]
       - continuation/continue:
           configuration_path: result
+          parameters: /tmp/params.json
 
 workflows:
   setup-dynamic-config:

@@ -71,7 +71,7 @@
           } ''
           for i in "''${!names[@]}"; do
             deps=("''${paths[@]:0:$i}" "''${paths}[@]:$((i+1))")
-            jq ".\"graph-''${names[$i]}\" | [.[] | select(.path | IN(\$ARGS.positional[])) | .path] | {\"''${names[$i]}\": {deps:., path:\"''${paths[$i]}\"}}" "$NIX_ATTRS_JSON_FILE" --args "''${deps[@]}" > "$i.json"
+            jq ".\"graph-''${names[$i]}\" | [.[] | select(.path | IN(\$ARGS.positional[])) | .path] | {\"''${names[$i]}\": {deps:., path:\"''${paths[$i]}\", drv:\"''${drvs[$i]}\"}}" "$NIX_ATTRS_JSON_FILE" --args "''${deps[@]}" > "$i.json"
           done
           jq --slurp 'add' *.json > $out
         '';
