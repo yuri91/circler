@@ -34,17 +34,15 @@ jobs:
       - run:
           name: Evaluate Build
           command: |
-            nix build .#config
-            mkdir -p nars
-            nix-store --export $(nix-store -qR result) > nars/eval.nar
-            cp result /tmp/config
-            CHECKSUM=$(sha256sum result | xxd -r -p | base64 | tr '/' '_')
+            ./generate-config.py > /tmp/config
+            nix copy --to file://$(pwd)/cache $(readlink -f *.drv)
+            CHECKSUM=$(sha256sum /tmp/config | xxd -r -p | base64 | tr '/' '_')
             jq -n --arg cs "$CHECKSUM" '{"eval-cache-key": ("nix-store-eval-" + $cs)}' > /tmp/params.json
       - save_cache:
           key: nix-store-eval-{{ checksum "/tmp/config" }}
-          paths: ["nars"]
+          paths: ["cache"]
       - continuation/continue:
-          configuration_path: result
+          configuration_path: /tmp/config
           parameters: /tmp/params.json
 
 workflows:
