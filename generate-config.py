@@ -159,6 +159,21 @@ def load_derivations() -> Dict[str, Derivation]:
 
     return drvs
 
+def prune_graph(g: Dict[str, Derivation]) -> Dict[str, Derivation]:
+    pruned = {k:Derivation(name=v.name, drv=v.drv, deps=[]) for (k,v) in g.items()}
+    for cur in g.keys():
+        for dx in g[cur].deps:
+            dx_needed = True
+            for dy in g[cur].deps:
+                if dx in dy.deps:
+                    dx_needed = False
+                    break
+            if dx_needed:
+                pruned[cur].deps.append(dx)
+    return pruned
+
+
 drvs = load_derivations()
+drvs = prune_graph(drvs)
 config = generate_circleci_config(drvs)
 print(json.dumps(config, indent=2))
