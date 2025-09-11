@@ -1,0 +1,45 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=68", "wheel"]
+
+[project]
+dependencies = ["requests==2.32.3", "types-requests==2.32.0.20250328", "pyyaml==6.0.2", "types-pyyaml==6.0.12.20250402", "sh==2.2.2"]
+name = "circler"
+requires-python = ">=3.12"
+version = "0.1.0"
+
+[project.scripts]
+ci-cheerp = "circler.cheerp:run"
+circler = "circler.main:main"
+
+[tool.mypy]
+disallow_any_unimported = false
+disallow_untyped_defs = true
+mypy_path = "src"
+no_implicit_optional = true
+python_version = "3.12"
+strict = true
+strict_equality = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[tool.ruff.lint]
+ignore = ["E501", "B008"]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "C4",
+    "UP",
+    "ARG",
+    "SIM",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
