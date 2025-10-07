@@ -154,7 +154,7 @@ def generate_main_pipeline() -> None:
     drvs = load_derivations(items)
     drvs = prune_graph(drvs)
     p = generate_build_pipeline(drvs)
-    export("NEXT_PIPELINE", p.dump_json_str())
+    export("NEXT_PIPELINE", p.dump_json())
 
 
 @step(name="Trigger continuation")
