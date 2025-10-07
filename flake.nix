@@ -17,6 +17,8 @@
         packages.circler = circler;
         packages.python = pkgs.python3.withPackages (ps: [
           circler
+          pkgs.attic-client
+          pkgs.nix-eval-jobs
         ]);
         devShells.default = pkgs.callPackage ./shell.nix { };
       });
