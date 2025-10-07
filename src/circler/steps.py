@@ -154,7 +154,7 @@ def generate_main_pipeline() -> None:
     drvs = load_derivations(items)
     drvs = prune_graph(drvs)
     p = generate_build_pipeline(drvs)
-    export("NEXT_PIPELINE", p)
+    export("NEXT_PIPELINE", p.dump_json_str())
 
 
 @step(name="Trigger continuation")
@@ -162,10 +162,9 @@ def continuation() -> None:
     import requests
 
     pipeline = env["NEXT_PIPELINE"]
-    assert isinstance(pipeline, Pipeline)
     payload = {
         "continuation-key": os.environ["CIRCLE_CONTINUATION_KEY"],
-        "configuration": pipeline.dump_json_str(),
+        "configuration": pipeline,
     }
     response = requests.post(
         "https://circleci.com/api/v2/pipeline/continue",
