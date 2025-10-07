@@ -127,7 +127,7 @@ nix-store --add-root /tmp/python --realize {shell_path}
 @step(name="Cache python shell")
 def cache_shell() -> None:
     sh.attic.push("lt:cheerp", "/tmp/python")
-    export("SHELL_PATH", os.readlink("/tmp/python"))
+    export("SHELL_PATH", os.readlink("/tmp/python")+"/bin/python")
 
 
 def bootstrap_steps() -> list[Step]:
