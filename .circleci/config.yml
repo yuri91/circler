@@ -47,6 +47,11 @@ jobs:
         name: Eval nix expression
     - run:
         command: |
+          from circler.steps import cache_eval_jobs
+          cache_eval_jobs()
+        name: Cache eval jobs
+    - run:
+        command: |
           from circler.steps import generate_main_pipeline
           generate_main_pipeline()
         name: Generate main pipeline

@@ -129,6 +129,12 @@ def cache_shell() -> None:
     sh.attic.push("lt:cheerp", "/tmp/python")
     export("SHELL_PATH", os.readlink("/tmp/python")+"/bin/python")
 
+@step(name="Cache eval jobs")
+def cache_eval_jobs() -> None:
+    items = env["EVAL_JOBS"]
+    for i in items:
+        sh.attic.push("lt:cheerp", i["drvPath"])
+
 
 def bootstrap_steps() -> list[Step]:
     return [

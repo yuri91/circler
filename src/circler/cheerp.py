@@ -1,5 +1,11 @@
 from .circleci import Executor, Job, JobInstance, Pipeline, Workflow
-from .steps import bootstrap_steps, continuation, generate_main_pipeline, nix_eval_jobs
+from .steps import (
+    bootstrap_steps,
+    cache_eval_jobs,
+    continuation,
+    generate_main_pipeline,
+    nix_eval_jobs,
+)
 
 
 def run() -> None:
@@ -16,6 +22,7 @@ def run() -> None:
             steps=bootstrap_steps()
             + [
                 nix_eval_jobs.bind("(import ./test/release.nix{})"),
+                cache_eval_jobs,
                 generate_main_pipeline,
                 continuation,
             ],
