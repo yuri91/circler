@@ -26,8 +26,8 @@ jobs:
         shell: /bin/sh
     - run:
         command: |
-          attic login lt https://nix.leaningtech.com ${ATTIC_TOKEN}
-          attic use lt:cheerp
+          nix run nixpkgs#attic-client -- login lt https://nix.leaningtech.com ${ATTIC_TOKEN}
+          nix run nixpkgs#attic-client -- use lt:cheerp
         name: Setup Attic
         shell: /bin/sh
     - run:

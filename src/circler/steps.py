@@ -72,8 +72,8 @@ def attic_setup(url: str, name: str, cache: str) -> Step:
         name="Setup Attic",
         shell="/bin/sh",
         command=f"""
-attic login {name} {url} ${{ATTIC_TOKEN}}
-attic use {name}:{cache}
+nix run nixpkgs#attic-client -- login {name} {url} ${{ATTIC_TOKEN}}
+nix run nixpkgs#attic-client -- use {name}:{cache}
 """,
     )
 

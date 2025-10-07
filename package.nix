@@ -1,6 +1,7 @@
 { lib
 , python3Packages
 , nix-eval-jobs
+, attic-client
 , formats
 }:
 let
@@ -89,6 +90,7 @@ python3Packages.buildPythonPackage {
 
   buildInputs = [
     nix-eval-jobs
+    attic-client
   ];
 
   propagatedBuildInputs = deps;
