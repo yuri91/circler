@@ -177,7 +177,7 @@ def continuation() -> None:
 
 @step(name="Realize derivation")
 def realize_drv(path: str) -> None:
-    out = sh.bake("nix-store")(_long_sep=None, realize=path)
+    out = sh.nix_store(_long_sep=None, realize=path)
     export("OUT_PATHS", out.splitlines())
 
 
