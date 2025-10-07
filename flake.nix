@@ -15,11 +15,17 @@
       {
         packages.default = circler;
         packages.circler = circler;
-        packages.python = pkgs.python3.withPackages (ps: [
+        packages.python = (pkgs.python3.withPackages (ps: [
           circler
-          pkgs.attic-client
-          pkgs.nix-eval-jobs
-        ]);
+        ])).overrideAttrs
+          (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
+            postBuild = (old.postBuild or "") + ''
+              for bin in $out/bin/{python,python3}; do
+                wrapProgram $bin --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.attic-client pkgs.nix-eval-jobs]}
+              done
+            '';
+          });
         devShells.default = pkgs.callPackage ./shell.nix { };
       });
 }
