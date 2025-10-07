@@ -135,6 +135,10 @@ def cache_eval_jobs() -> None:
     for i in items:
         sh.attic.push("lt:cheerp", i["drvPath"])
 
+@step(name="Cache built derivation outputs")
+def cache_drv_outputs(outs: list[str]) -> None:
+    for o in outs:
+        sh.attic.push("lt:cheerp", o)
 
 def bootstrap_steps() -> list[Step]:
     return [
@@ -196,7 +200,7 @@ def generate_build_job(
         Job(
             executor=executor,
             shell=shell_path,
-            steps=setup_steps(shell_path) + [realize_drv.bind(drv.drv)],
+            steps=setup_steps(shell_path) + [realize_drv.bind(drv.drv), cache_drv_outputs.bind(list(drv.outputs.values()))],
         ),
     )
     return JobInstance(job)
