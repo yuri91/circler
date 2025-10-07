@@ -1,51 +1,66 @@
-version: 2.1
-
-setup: true
-
-orbs:
-  continuation: circleci/continuation@1
-
+executors:
+  docker_large:
+    docker:
+      image: nixos/nix:latest
+    resource_class: large
 jobs:
   setup:
-    docker:
-      - image: nixos/nix:latest
-    resource_class: small
+    executor: docker_large
+    shell: /tmp/python/bin/python
     steps:
-      - checkout
-      - run:
-          name: Configure Nix
-          command: |
-            cat \<< 'EOF' > /etc/nix/nix.conf
-              cores = 0
-              experimental-features = nix-command flakes ca-derivations
-              max-jobs = auto
-              sandbox = false
-              sandbox-fallback = true
-              substituters = https://cache.nixos.org/
-              system-features = nixos-test benchmark big-parallel kvm
-              trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-              trusted-substituters = 
-              trusted-users = root circleci
-            EOF
-      - run:
-          name: Install utilities
-          command: |
-            nix profile install nixpkgs#jq nixpkgs#curl nixpkgs#which nixpkgs#xxd
-      - run:
-          name: Evaluate Build
-          command: |
-            ./generate-config.py > /tmp/config
-            nix copy --to file://$(pwd)/cache $(readlink -f *.drv)
-            CHECKSUM=$(sha256sum /tmp/config | xxd -r -p | base64 | tr '/' '_')
-            jq -n --arg cs "$CHECKSUM" '{"eval-cache-key": ("nix-store-eval-" + $cs)}' > /tmp/params.json
-      - save_cache:
-          key: nix-store-eval-{{ checksum "/tmp/config" }}
-          paths: ["cache"]
-      - continuation/continue:
-          configuration_path: /tmp/config
-          parameters: /tmp/params.json
-
+    - checkout
+    - run:
+        command: |
+          cat \<< 'EOF' >/etc/nix/nix.conf
+          experimental-features = nix-command flakes ca-derivations
+          cores = 4
+          max-jobs = 2
+          sandbox = false
+          sandbox-fallback = true
+          system-features = nixos-test benchmark big-parallel kvm
+          substituters = https://cache.nixos.org/
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+          trusted-users = root circleci
+          EOF
+        name: Setup nix
+        shell: /bin/sh
+    - run:
+        command: |
+          attic login lt https://nix.leaningtech.com ${ATTIC_TOKEN}
+          attic use lt:cheerp
+        name: Setup Attic
+        shell: /bin/sh
+    - run:
+        command: |
+          nix build .#python --out-link /tmp/python
+        name: Bootstrap shell
+        shell: /bin/sh
+    - run:
+        command: |
+          from circler.steps import cache_shell
+          cache_shell()
+        name: Cache python shell
+    - run:
+        command: |
+          from circler.steps import nix_eval_jobs
+          nix_eval_jobs('(import ./test/release.nix{})')
+        name: Eval nix expression
+    - run:
+        command: |
+          from circler.steps import generate_main_pipeline
+          generate_main_pipeline()
+        name: Generate main pipeline
+    - run:
+        command: |
+          from circler.steps import continuation
+          continuation()
+        name: Trigger continuation
+parameters: {}
+setup: true
+version: '2.1'
 workflows:
-  setup-dynamic-config:
+  setup:
     jobs:
-      - setup
+    - setup:
+        requires: []
+
