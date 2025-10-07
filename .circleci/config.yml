@@ -1,7 +1,7 @@
 executors:
   docker_large:
     docker:
-      image: nixos/nix:latest
+    - image: nixos/nix:latest
     resource_class: large
 jobs:
   setup:
