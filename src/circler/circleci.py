@@ -69,7 +69,7 @@ class Docker:
 
 @serialize.register
 def _(x: Docker) -> dict[str, Any]:
-    return {"docker": serialize_base(x)}
+    return {"docker": [serialize_base(x)]}
 
 
 @dataclass
