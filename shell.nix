@@ -7,7 +7,7 @@ let
   generate-pyproject = writeShellApplication {
     name = "generate-pyproject";
     text = ''
-      cat ${package.pyproject} > pyproject.toml
+      cat ${package.pyprojectfile} > pyproject.toml
     '';
   };
 in

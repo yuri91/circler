@@ -3,9 +3,9 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools>=68", "wheel"]
 
 [project]
-dependencies = ["requests==2.32.3", "types-requests==2.32.0.20250328", "pyyaml==6.0.2", "types-pyyaml==6.0.12.20250402", "sh==2.2.2"]
+dependencies = ["requests==2.32.5", "types-requests==2.32.4.20250611", "pyyaml==6.0.2", "types-pyyaml==6.0.12.20250516", "sh==2.2.2"]
 name = "circler"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 version = "0.1.0"
 
 [project.scripts]
@@ -17,7 +17,7 @@ disallow_any_unimported = false
 disallow_untyped_defs = true
 mypy_path = "src"
 no_implicit_optional = true
-python_version = "3.12"
+python_version = "3.13"
 strict = true
 strict_equality = true
 warn_no_return = true

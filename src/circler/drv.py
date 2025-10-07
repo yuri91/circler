@@ -5,10 +5,6 @@ import subprocess
 from dataclasses import dataclass
 from typing import Any
 
-from .circleci import DictRef, Executor, Job, JobInstance, Pipeline, Workflow
-from .exec import env
-from .steps import setup_steps
-
 
 @dataclass
 class Derivation:
@@ -20,34 +16,6 @@ class Derivation:
 
 def get_safe_name(name: str) -> str:
     return name.replace(".", "_")
-
-
-def generate_build_job(
-    p: Pipeline, executor: DictRef[Executor], drv: Derivation
-) -> JobInstance:
-    shell_path = env["SHELL_PATH"]
-    job = p.job(
-        get_safe_name(drv.name),
-        Job(executor=executor, shell=shell_path, steps=setup_steps(shell_path) + []),
-    )
-    return JobInstance(job)
-
-
-def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
-    p = Pipeline(setup=False)
-    docker = p.executor(
-        "docker_large",
-        Executor.docker(image="nixos/nix:latest", resource_class="large"),
-    )
-    jobs: dict[str, JobInstance] = {}
-    for drv in drvs.values():
-        jobs[drv.name] = generate_build_job(p, docker, drv)
-
-    for name in jobs:
-        for dep in drvs[name].deps:
-            jobs[name].requires.append(jobs[dep.name].job)
-    p.workflow("build-all", Workflow(jobs=list(jobs.values())))
-    return p
 
 
 def filter_cached(drvs: dict[str, Derivation]) -> None:
@@ -74,34 +42,6 @@ def filter_cached(drvs: dict[str, Derivation]) -> None:
             del drvs[d.name]
 
 
-def get_derivations() -> list[dict[str, Any]]:
-    result = subprocess.run(
-        [
-            "nix-eval-jobs",
-            "-E",
-            "(import ./default.nix{}).ci.release",
-            "--gc-roots-dir",
-            ".",
-            "--workers",
-            "2",
-            "--max-memory-size",
-            "2G",
-            "--verbose",
-            "--log-format",
-            "raw",
-            "--check-cache-status",
-        ],
-        stdout=subprocess.PIPE,
-        text=True,
-        check=True,
-    )
-    items = []
-    for line in result.stdout.strip().split("\n"):
-        i = json.loads(line)
-        items.append(i)
-    return items
-
-
 def get_all_deps(drv: str) -> list[str]:
     result = subprocess.run(
         ["nix-store", "--query", "--requisites", drv],
@@ -112,9 +52,7 @@ def get_all_deps(drv: str) -> list[str]:
     return result.stdout.strip().split("\n")
 
 
-def load_derivations() -> dict[str, Derivation]:
-    items = get_derivations()
-
+def load_derivations(items: list[Any]) -> dict[str, Derivation]:
     drvs = {
         i["attr"]: Derivation(
             name=i["attr"], drv=i["drvPath"], outputs=i["outputs"], deps=[]
@@ -145,10 +83,3 @@ def prune_graph(g: dict[str, Derivation]) -> dict[str, Derivation]:
             if dx_needed:
                 pruned[cur].deps.append(dx)
     return pruned
-
-
-def main() -> None:
-    drvs = load_derivations()
-    drvs = prune_graph(drvs)
-    config = generate_circleci_config(drvs)
-    print(json.dumps(config, indent=2))

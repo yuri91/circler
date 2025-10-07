@@ -110,5 +110,5 @@ python3Packages.buildPythonPackage {
 
     runHook postCheck
   '';
-  passthru.pyproject = pyproject;
+  passthru.pyprojectfile = pyproject;
 }

@@ -1,8 +1,11 @@
+import json
 import os
 from collections.abc import Callable
+from typing import Any, Self
 
 from .circleci import (
     Checkout,
+    DictRef,
     Executor,
     Job,
     JobInstance,
@@ -11,26 +14,40 @@ from .circleci import (
     Step,
     Workflow,
 )
+from .drv import Derivation, get_safe_name, load_derivations, prune_graph
 from .exec import env, export, sh
 
 
 class CallableRunStep(Run):
-    def __init__(self, name: str, shell: str | None, fn: Callable[[], None]):
+    def __init__(
+        self,
+        name: str,
+        shell: str | None,
+        fn: Callable[..., None],
+        args: list[Any] | None = None,
+    ):
+        args = args or []
+        arg_str = ",".join(repr(a) for a in args)
         cmd = f"""
 from {fn.__module__} import {fn.__name__}
-{fn.__name__}()
+{fn.__name__}({arg_str})
 """
         self.fn = fn
+        self.args = args or []
         super().__init__(name, cmd, shell)
 
-    def __call__(self) -> None:
-        self.fn()
+    def bind(self, *args: Any) -> Self:
+        ret = type(self)(self.name, self.shell, self.fn, list(args))
+        return ret
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        self.fn(*args, **kwargs)
 
 
 def step(
     name: str, shell: str | None = None
-) -> Callable[[Callable[[], None]], CallableRunStep]:
-    def inner(func: Callable[[], None]) -> CallableRunStep:
+) -> Callable[[Callable[..., None]], CallableRunStep]:
+    def inner(func: Callable[..., None]) -> CallableRunStep:
         return CallableRunStep(name, shell, func)
 
     return inner
@@ -61,20 +78,22 @@ attic use {name}:{cache}
     )
 
 
-def nix_eval_jobs(expr: str) -> Step:
-    @step(name="Eval nix expression")
-    def run() -> None:
-        out = sh.nix_eval_jobs(
-            _long_sep=None,
-            expr=expr,
-            workers=2,
-            max_memory_size="2G",
-            verbose=True,
-            log_format="raw",
-            check_cache_status=True,
-        )
-        export("EVAL_JOBS", out)
-    return run
+@step(name="Eval nix expression")
+def nix_eval_jobs(expr: str) -> None:
+    out = sh.nix_eval_jobs(
+        _long_sep=None,
+        expr=expr,
+        workers=2,
+        max_memory_size="2G",
+        verbose=True,
+        log_format="raw",
+        check_cache_status=True,
+    )
+    items = []
+    for line in out.strip().split("\n"):
+        i = json.loads(line)
+        items.append(i)
+    export("EVAL_JOBS", items)
 
 
 nix_setup = Run(
@@ -131,7 +150,11 @@ def setup_steps(shell_path: str) -> list[Step]:
 
 @step(name="Generate main pipeline")
 def generate_main_pipeline() -> None:
-    pass
+    items = env["EVAL_JOBS"]
+    drvs = load_derivations(items)
+    drvs = prune_graph(drvs)
+    p = generate_build_pipeline(drvs)
+    export("NEXT_PIPELINE", p)
 
 
 @step(name="Trigger continuation")
@@ -151,3 +174,41 @@ def continuation() -> None:
     )
     print(response.text)
     pass
+
+
+@step(name="Realize derivation")
+def realize_drv(path: str) -> None:
+    out = sh.bake("nix-store")(_long_sep=None, realize=path)
+    export("OUT_PATHS", out.splitlines())
+
+
+def generate_build_job(
+    p: Pipeline, executor: DictRef[Executor], drv: Derivation
+) -> JobInstance:
+    shell_path = env["SHELL_PATH"]
+    job = p.job(
+        get_safe_name(drv.name),
+        Job(
+            executor=executor,
+            shell=shell_path,
+            steps=setup_steps(shell_path) + [realize_drv.bind(drv.drv)],
+        ),
+    )
+    return JobInstance(job)
+
+
+def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
+    p = Pipeline(setup=False)
+    docker = p.executor(
+        "docker_large",
+        Executor.docker(image="nixos/nix:latest", resource_class="large"),
+    )
+    jobs: dict[str, JobInstance] = {}
+    for drv in drvs.values():
+        jobs[drv.name] = generate_build_job(p, docker, drv)
+
+    for name in jobs:
+        for dep in drvs[name].deps:
+            jobs[name].requires.append(jobs[dep.name].job)
+    p.workflow("build-all", Workflow(jobs=list(jobs.values())))
+    return p

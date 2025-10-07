@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field, fields, is_dataclass
 from functools import singledispatch
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Literal
 
 import requests
 import yaml
@@ -43,10 +43,7 @@ def serialize(x: Any, skip: list[str] | None = None) -> Any:
     return serialize_base(x, skip)
 
 
-T = TypeVar("T")
-
-
-class DictRef(Generic[T]):
+class DictRef[T]:
     key: str
     _dict: dict[str, T]
 
