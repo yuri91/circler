@@ -13,6 +13,7 @@ let
     pyyaml
     types-pyyaml
     sh
+    numpy
   ];
   formatDeps = deps:
     let

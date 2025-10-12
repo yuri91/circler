@@ -7,14 +7,15 @@ from .circleci import (
     Checkout,
     DictRef,
     Executor,
-    Job,
     JobInstance,
+    NoOpJob,
     Pipeline,
     Run,
     Step,
+    StepsJob,
     Workflow,
 )
-from .drv import Derivation, get_safe_name, load_derivations, prune_graph
+from .drv import Derivation, get_safe_name, load_derivations
 from .exec import env, export, sh
 
 
@@ -127,7 +128,8 @@ nix-store --add-root /tmp/python --realize {shell_path}
 @step(name="Cache python shell")
 def cache_shell() -> None:
     sh.attic.push("lt:cheerp", "/tmp/python")
-    export("SHELL_PATH", os.readlink("/tmp/python")+"/bin/python")
+    export("SHELL_PATH", os.readlink("/tmp/python") + "/bin/python")
+
 
 @step(name="Cache eval jobs")
 def cache_eval_jobs() -> None:
@@ -135,10 +137,12 @@ def cache_eval_jobs() -> None:
     for i in items:
         sh.attic.push("lt:cheerp", i["drvPath"])
 
+
 @step(name="Cache built derivation outputs")
 def cache_drv_outputs(outs: list[str]) -> None:
     for o in outs:
         sh.attic.push("lt:cheerp", o)
+
 
 def bootstrap_steps() -> list[Step]:
     return [
@@ -162,7 +166,6 @@ def setup_steps(shell_path: str) -> list[Step]:
 def generate_main_pipeline() -> None:
     items = env["EVAL_JOBS"]
     drvs = load_derivations(items)
-    drvs = prune_graph(drvs)
     p = generate_build_pipeline(drvs)
     export("NEXT_PIPELINE", p.dump_json())
 
@@ -197,13 +200,55 @@ def generate_build_job(
     shell_path = env["SHELL_PATH"]
     job = p.job(
         get_safe_name(drv.name),
-        Job(
+        StepsJob(
             executor=executor,
             shell=shell_path,
-            steps=setup_steps(shell_path) + [realize_drv.bind(drv.drv), cache_drv_outputs.bind(list(drv.outputs.values()))],
+            steps=setup_steps(shell_path)
+            + [
+                realize_drv.bind(drv.drv),
+                cache_drv_outputs.bind(list(drv.outputs.values())),
+            ],
         ),
     )
     return JobInstance(job)
+
+
+def prune_deps(jobs: dict[str, JobInstance]) -> dict[str, JobInstance]:
+    import numpy as np
+    import numpy.typing as npt
+
+    def transitive_reduction(
+        adj_matrix: npt.NDArray[np.bool_],
+    ) -> npt.NDArray[np.bool_]:
+        n = len(adj_matrix)
+        reach_indirect = np.zeros((n, n), dtype=bool)
+        temp = adj_matrix.copy()
+        for _ in range(n - 1):
+            temp = temp @ adj_matrix
+            reach_indirect |= temp
+        reduction: npt.NDArray[np.bool_] = adj_matrix & ~reach_indirect
+        return reduction
+
+    nodes = list(jobs.keys())
+    nodes_idx_map = {n: i for i, n in enumerate(nodes)}
+    size = len(nodes)
+    adj = np.zeros((size, size), dtype=bool)
+    for i in range(size):
+        for v in jobs[nodes[i]].requires:
+            j = nodes_idx_map[v.key]
+            adj[i][j] = True
+    adj = transitive_reduction(adj)
+    ret = {}
+    for i in range(size):
+        job: JobInstance = jobs[nodes[i]]
+        requires = []
+        for j in range(size):
+            if not adj[i][j]:
+                continue
+            requires.append(jobs[nodes[j]].job)
+        ret_v = JobInstance(job.job, job.arguments, requires)
+        ret[nodes[i]] = ret_v
+    return ret
 
 
 def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
@@ -214,10 +259,15 @@ def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
     )
     jobs: dict[str, JobInstance] = {}
     for drv in drvs.values():
-        jobs[drv.name] = generate_build_job(p, docker, drv)
+        jobs[get_safe_name(drv.name)] = generate_build_job(p, docker, drv)
 
     for name in jobs:
         for dep in drvs[name].deps:
             jobs[name].requires.append(jobs[dep.name].job)
+
+    jobs["built-all"] = JobInstance(
+        job=p.job("built-all", NoOpJob()), requires=[j.job for j in jobs.values()]
+    )
+    jobs = prune_deps(jobs)
     p.workflow("build-all", Workflow(jobs=list(jobs.values())))
     return p

@@ -115,12 +115,20 @@ type Step = Run | Checkout
 
 
 @dataclass
-class Job:
+class StepsJob:
     executor: DictRef[Executor]
     steps: list[Step]
     parameters: dict[str, Parameter] | None = None
     shell: str | None = None
 
+class NoOpJob:
+    pass
+
+@serialize.register
+def _(_: NoOpJob) -> dict[str, Any]:
+    return { "type": "no-op" }
+
+type Job = StepsJob | NoOpJob
 
 @dataclass
 class JobInstance:

@@ -66,20 +66,3 @@ def load_derivations(items: list[Any]) -> dict[str, Derivation]:
         v.deps = [drvMap[d] for d in get_all_deps(i.drv) if d in drvMap and d != v.drv]
 
     return drvs
-
-
-def prune_graph(g: dict[str, Derivation]) -> dict[str, Derivation]:
-    pruned = {
-        k: Derivation(name=v.name, drv=v.drv, outputs=v.outputs, deps=[])
-        for (k, v) in g.items()
-    }
-    for cur in g:
-        for dx in g[cur].deps:
-            dx_needed = True
-            for dy in g[cur].deps:
-                if dx in dy.deps:
-                    dx_needed = False
-                    break
-            if dx_needed:
-                pruned[cur].deps.append(dx)
-    return pruned
