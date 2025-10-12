@@ -167,6 +167,7 @@ def generate_main_pipeline() -> None:
     items = env["EVAL_JOBS"]
     drvs = load_derivations(items)
     p = generate_build_pipeline(drvs)
+    print(p.dump_yaml())
     export("NEXT_PIPELINE", p.dump_json())
 
 
