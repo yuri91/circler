@@ -121,6 +121,7 @@ shell_bootstrap = Run(
     name="Bootstrap shell",
     shell="/bin/sh",
     command="""
+env | grep CIRCLER
 nix build .#python --out-link /tmp/python
 """,
 )
