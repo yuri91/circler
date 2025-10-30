@@ -119,6 +119,7 @@ class StepsJob:
     executor: DictRef[Executor]
     steps: list[Step]
     parameters: dict[str, Parameter] | None = None
+    environment: dict[str, str] | None = None
     shell: str | None = None
 
 class NoOpJob:
@@ -227,3 +228,14 @@ class Pipeline:
             json=payload,
             headers={"Accept": "application/json"},
         )
+
+def circler_environment() -> dict[str, str]:
+    return {
+        'CIRCLER_TRIGGER_REPO_URL': '<< pipeline.trigger_parameters.github_app.repo_url >>',
+        'CIRCLER_TRIGGER_REPO_NAME': '<< pipeline.trigger_parameters.github_app.repo_name >>',
+        'CIRCLER_TRIGGER_CHECKOUT_SHA': '<< pipeline.trigger_parameters.github_app.checkout_sha >>',
+        'CIRCLER_TRIGGER_BRANCH': '<< pipeline.trigger_parameters.github_app.branch >>',
+        'CIRCLER_GIT_BRANCH': '<< pipeline.git.branch >>',
+        'CIRCLER_GIT_REV': '<< pipeline.git.revision >>',
+        'CIRCLER_GIT_BRANCH_IS_DEFAULT': '<< pipeline.git.branch.is_default >>',
+    }

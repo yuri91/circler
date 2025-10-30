@@ -5,6 +5,17 @@ executors:
     resource_class: large
 jobs:
   setup:
+    environment:
+      CIRCLER_GIT_BRANCH: << pipeline.git.branch >>
+      CIRCLER_GIT_BRANCH_IS_DEFAULT: << pipeline.git.branch.is_default >>
+      CIRCLER_GIT_REV: << pipeline.git.revision >>
+      CIRCLER_TRIGGER_BRANCH: << pipeline.trigger_parameters.github_app.branch >>
+      CIRCLER_TRIGGER_CHECKOUT_SHA: << pipeline.trigger_parameters.github_app.checkout_sha
+        >>
+      CIRCLER_TRIGGER_REPO_NAME: << pipeline.trigger_parameters.github_app.repo_name
+        >>
+      CIRCLER_TRIGGER_REPO_URL: << pipeline.trigger_parameters.github_app.repo_url
+        >>
     executor: docker_large
     shell: /tmp/python/bin/python
     steps:
@@ -32,6 +43,7 @@ jobs:
         shell: /bin/sh
     - run:
         command: |
+          env
           nix build .#python --out-link /tmp/python
         name: Bootstrap shell
         shell: /bin/sh

@@ -1,4 +1,11 @@
-from .circleci import Executor, JobInstance, Pipeline, StepsJob, Workflow
+from .circleci import (
+    Executor,
+    JobInstance,
+    Pipeline,
+    StepsJob,
+    Workflow,
+    circler_environment,
+)
 from .steps import (
     bootstrap_steps,
     cache_eval_jobs,
@@ -18,6 +25,7 @@ def run() -> None:
         "setup",
         StepsJob(
             executor=docker,
+            environment=circler_environment(),
             shell="/tmp/python/bin/python",
             steps=bootstrap_steps()
             + [
