@@ -1,5 +1,6 @@
 { lib
 , python3Packages
+, git
 , nix-eval-jobs
 , attic-client
 , formats
@@ -90,6 +91,7 @@ python3Packages.buildPythonPackage {
   ];
 
   buildInputs = [
+    git
     nix-eval-jobs
     attic-client
   ];

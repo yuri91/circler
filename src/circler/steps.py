@@ -4,7 +4,6 @@ from collections.abc import Callable
 from typing import Any, Self
 
 from .circleci import (
-    Checkout,
     DictRef,
     Executor,
     JobInstance,
@@ -79,6 +78,18 @@ nix run nixpkgs#attic-client -- use {name}:{cache}
     )
 
 
+checkout = Run(
+    name="Clone and checkout repo",
+    shell="/bin/sh",
+    command="""
+mkdir -p ~/.ssh
+echo 'github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowgcQnjshcLrqPEiiphnt+VTTvDP6mHBL9j1aNUkY4Ue1gvwnGLVlOhGeYrnZaMgRK6+PKCUXaDbC7qtbW8gIkhL7aGCsOr/C56SJMy/BCZfxd1nWzAOxSDPgVsmerOBYfNqltV9/hWCqBywINIR+5dIg6JTJ72pcEpEjcYgXkE2YEFXV1JHnsKgbLWNlhScqb2UmyRkQyytRLtL+38TGxkxCflmO+5Z8CSSNY7GidjMIZ7Q4zMjA2n1nGrlTDkzwDCsw+wqFPGQA179cnfGWOWRVruj16z6XyvxvjJwbz0wQZ75XK5tKSb7FNyeIEs4TT4jk+S4dhPeAUC5y+bDYirYgM4GC7uEnztnZyaVWQ7B381AK4Qdrwt51ZqExKbQpTUNn+EjqoTwvqNj4kqx5QUCI0ThS/YkOxJCXmPUWZbhjpCg56i+2aB6CmK2JGhn57K5mj0MNdBXA4/WnwH6XoPWJzK5Nyu2zB3nAZp+S5hpQs+p1vN1/wsjk=
+' >> ~/.ssh/known_hosts
+git clone $CIRCLE_REPOSITORY_URL --revision=$CIRCLE_SHA1 --depth 1 .
+""",
+)
+
+
 @step(name="Eval nix expression")
 def nix_eval_jobs(expr: str) -> None:
     out = sh.nix_eval_jobs(
@@ -146,7 +157,7 @@ def cache_drv_outputs(outs: list[str]) -> None:
 
 def bootstrap_steps() -> list[Step]:
     return [
-        Checkout(),
+        checkout,
         nix_setup,
         attic_setup("https://nix.leaningtech.com", "lt", "cheerp"),
         shell_bootstrap,
