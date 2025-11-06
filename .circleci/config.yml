@@ -50,7 +50,7 @@ jobs:
         shell: /bin/sh
     - run:
         command: |
-          env
+          env | grep CIRCLER
           nix build .#python --out-link /tmp/python
         name: Bootstrap shell
         shell: /bin/sh
