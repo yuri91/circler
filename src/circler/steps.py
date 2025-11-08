@@ -90,6 +90,25 @@ git clone $CIRCLE_REPOSITORY_URL --revision=$CIRCLE_SHA1 --depth 1 .
 )
 
 
+@step(name="Update pin of trigger repo and commit")
+def update_pin_and_commit() -> None:
+    repo = env["CIRCLER_TRIGGER_REPO_NAME"]
+    branch = env["CIRCLER_TRIGGER_BRANCH"]
+    sha = env["CIRCLER_TRIGGER_CHECKOUT_SHA"]
+    ci_num = env["CIRCLE_BUILD_NUM"]
+    ci_repo = env["CIRCLE_PROJECT_REPONAME"]
+    ci_branch = f"{ci_repo}-{ci_num}"
+    sh.git.switch(c=ci_branch)
+    if repo != ci_repo:
+        with open("npins/sources.json") as f:
+            npins = json.load(f)
+        owner = npins[repo]["repository"]["owner"]
+        sh.npins.add.github(owner, repo, b=branch, at=sha)
+        sh.git.add("npins/sources.json")
+        sh.git.commit(m=f"[CI] {repo}:{branch} {sha}")
+    sh.git.push("--set-upstream", "origin", ci_branch)
+
+
 @step(name="Eval nix expression")
 def nix_eval_jobs(expr: str) -> None:
     out = sh.nix_eval_jobs(

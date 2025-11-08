@@ -61,6 +61,11 @@ jobs:
         name: Cache python shell
     - run:
         command: |
+          from circler.steps import update_pin_and_commit
+          update_pin_and_commit()
+        name: Update pin of trigger repo and commit
+    - run:
+        command: |
           from circler.steps import nix_eval_jobs
           nix_eval_jobs('(import ./test/release.nix{})')
         name: Eval nix expression
