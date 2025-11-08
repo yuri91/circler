@@ -106,7 +106,16 @@ def update_pin_and_commit() -> None:
         sh.npins.add.github(owner, repo, b=branch, at=sha)
         sh.git.add("npins/sources.json")
         sh.git.commit(m=f"[CI] {repo}:{branch} {sha}")
+        if branch == "main" or branch == "master":
+            export("BRANCH_TO_MERGE", ci_branch)
     sh.git.push("--set-upstream", "origin", ci_branch)
+
+
+@step(name="Merge CI branch to master")
+def merge_ci_branch(ci_branch: str) -> None:
+    sh.git.fetch(ci_branch)
+    sh.git.merge(ci_branch)
+    sh.git.push.origin("master")
 
 
 @step(name="Eval nix expression")
@@ -301,5 +310,18 @@ def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
         job=p.job("built-all", NoOpJob()), requires=[j.job for j in jobs.values()]
     )
     jobs = prune_deps(jobs)
+    if "BRANCH_TO_MERGE" in env:
+        ci_branch = env["BRANCH_TO_MERGE"]
+        jobs["merge-to-master"] = JobInstance(
+            job=p.job(
+                "merge-to-master",
+                StepsJob(
+                    executor=docker,
+                    shell=env["SHELL_PATH"],
+                    steps=[checkout, merge_ci_branch.bind(ci_branch)],
+                ),
+            ),
+            requires=[jobs["built-all"].job],
+        )
     p.workflow("build-all", Workflow(jobs=list(jobs.values())))
     return p
