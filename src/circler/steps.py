@@ -1,6 +1,7 @@
 import json
 import os
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, Self
 
 from .circleci import (
@@ -34,7 +35,8 @@ from {fn.__module__} import {fn.__name__}
 """
         self.fn = fn
         self.args = args or []
-        super().__init__(name, cmd, shell)
+        self.shell = shell or "/tmp/python/bin/python"
+        super().__init__(name, cmd, self.shell)
 
     def bind(self, *args: Any) -> Self:
         ret = type(self)(self.name, self.shell, self.fn, list(args))
@@ -90,6 +92,13 @@ git clone $CIRCLE_REPOSITORY_URL --revision=$CIRCLE_SHA1 --depth 1 .
 )
 
 
+@dataclass
+class GitRev:
+    repo: str
+    branch: str
+    sha: str | None
+
+
 @step(name="Update pin of trigger repo and commit")
 def update_pin_and_commit() -> None:
     repo = env["CIRCLER_TRIGGER_REPO_NAME"]
@@ -98,16 +107,30 @@ def update_pin_and_commit() -> None:
     ci_num = env["CIRCLE_BUILD_NUM"]
     ci_repo = env["CIRCLE_PROJECT_REPONAME"]
     ci_branch = f"{ci_repo}-{ci_num}"
-    sh.git.switch(c=ci_branch)
+    parameters = json.loads(env["CIRCLER_PARAMETERS"])
+    revs = []
+    do_merge = True
     if repo != ci_repo:
-        with open("npins/sources.json") as f:
-            npins = json.load(f)
-        owner = npins[repo]["repository"]["owner"]
-        sh.npins.add.github(owner, repo, b=branch, at=sha)
+        do_merge = branch == "main" or branch == "master"
+        revs.append(GitRev(repo, branch, sha))
+    for p, b in parameters.items():
+        if p.endswith("_branch"):
+            do_merge = False
+            revs.append(GitRev(p.removesuffix("_branch"), b, sha=None))
+    sh.git.switch(c=ci_branch)
+    with open("npins/sources.json") as f:
+        npins = json.load(f)
+    for r in revs:
+        owner = npins[r.repo]["repository"]["owner"]
+        if r.sha:
+            sh.npins.add.github(owner, repo, b=r.branch, at=r.sha)
+        else:
+            sh.npins.add.github(owner, repo, b=r.branch)
+    if len(revs) > 0:
         sh.git.add("npins/sources.json")
         sh.git.commit(m=f"[CI] {repo}:{branch} {sha}")
-        if branch == "main" or branch == "master":
-            export("BRANCH_TO_MERGE", ci_branch)
+    if do_merge:
+        export("BRANCH_TO_MERGE", ci_branch)
     sh.git.push("--set-upstream", "origin", ci_branch)
 
 
@@ -150,7 +173,7 @@ shell_bootstrap = Run(
     shell="/bin/sh",
     command="""
 env | grep CIRCLER
-nix build .#python --out-link /tmp/python
+nix build git@github.com:yuri91/circler#python --out-link /tmp/python
 """,
 )
 

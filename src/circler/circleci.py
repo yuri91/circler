@@ -231,6 +231,7 @@ class Pipeline:
 
 def circler_environment() -> dict[str, str]:
     return {
+        'CIRCLER_PARAMETERS': '<< pipeline.parameters >>',
         'CIRCLER_TRIGGER_REPO_URL': '<< pipeline.trigger_parameters.github_app.repo_url >>',
         'CIRCLER_TRIGGER_REPO_NAME': '<< pipeline.trigger_parameters.github_app.repo_name >>',
         'CIRCLER_TRIGGER_CHECKOUT_SHA': '<< pipeline.trigger_parameters.github_app.checkout_sha >>',

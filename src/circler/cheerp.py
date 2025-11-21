@@ -27,11 +27,10 @@ def run() -> None:
         StepsJob(
             executor=docker,
             environment=circler_environment(),
-            shell="/tmp/python/bin/python",
             steps=bootstrap_steps()
             + [
                 update_pin_and_commit,
-                nix_eval_jobs.bind("(import ./test/release.nix{})"),
+                nix_eval_jobs.bind("(import ./default.nix{}).ci.release"),
                 cache_eval_jobs,
                 generate_main_pipeline,
                 continuation,
