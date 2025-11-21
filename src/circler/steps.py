@@ -114,7 +114,7 @@ def update_pin_and_commit() -> None:
         do_merge = branch == "main" or branch == "master"
         revs.append(GitRev(repo, branch, sha))
     for p, b in parameters.items():
-        if p.endswith("_branch"):
+        if p.endswith("_branch") and b != "":
             do_merge = False
             revs.append(GitRev(p.removesuffix("_branch"), b, sha=None))
     sh.git.switch(c=ci_branch)
