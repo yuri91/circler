@@ -1,6 +1,7 @@
 from .circleci import (
     Executor,
     JobInstance,
+    Parameter,
     Pipeline,
     StepsJob,
     Workflow,
@@ -17,7 +18,8 @@ from .steps import (
 
 
 def run() -> None:
-    p = Pipeline(setup=True)
+    params = {"cheerp_compiler_branch": Parameter("string", "")}
+    p = Pipeline(setup=True, parameters=params)
     docker = p.executor(
         "docker_large",
         Executor.docker(image="nixos/nix:latest", resource_class="large"),
@@ -26,7 +28,7 @@ def run() -> None:
         "setup",
         StepsJob(
             executor=docker,
-            environment=circler_environment(),
+            environment=circler_environment(params),
             steps=bootstrap_steps()
             + [
                 update_pin_and_commit,

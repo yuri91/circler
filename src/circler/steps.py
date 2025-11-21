@@ -107,14 +107,18 @@ def update_pin_and_commit() -> None:
     ci_num = env["CIRCLE_BUILD_NUM"]
     ci_repo = env["CIRCLE_PROJECT_REPONAME"]
     ci_branch = f"{ci_repo}-{ci_num}"
-    parameters = json.loads(env["CIRCLER_PARAMETERS"])
+    parameters: dict[str, str] = {}
+    for k,v in env.items():
+        if not k.startswith("CIRCLER_PARAM_"):
+            continue
+        parameters[k.removeprefix("CIRCLER_PARAM_")] = v
     revs = []
     do_merge = True
     if repo != ci_repo:
         do_merge = branch == "main" or branch == "master"
         revs.append(GitRev(repo, branch, sha))
     for p, b in parameters.items():
-        if p.endswith("_branch"):
+        if p.endswith("_branch") and b != "":
             do_merge = False
             revs.append(GitRev(p.removesuffix("_branch"), b, sha=None))
     sh.git.switch(c=ci_branch)
@@ -173,7 +177,7 @@ shell_bootstrap = Run(
     shell="/bin/sh",
     command="""
 env | grep CIRCLER
-nix build git@github.com:yuri91/circler#python --out-link /tmp/python
+nix build github:yuri91/circler#python --out-link /tmp/python
 """,
 )
 
