@@ -329,9 +329,10 @@ def generate_build_pipeline(drvs: dict[str, Derivation]) -> Pipeline:
     for drv in drvs.values():
         jobs[get_safe_name(drv.name)] = generate_build_job(p, docker, drv)
 
-    for name in jobs:
-        for dep in drvs[name].deps:
-            jobs[name].requires.append(jobs[dep.name].job)
+    for drv in drvs.values():
+        name = get_safe_name(drv.name)
+        for dep in drv.deps:
+            jobs[name].requires.append(jobs[get_safe_name(dep.name)].job)
 
     jobs["built-all"] = JobInstance(
         job=p.job("built-all", NoOpJob()), requires=[j.job for j in jobs.values()]
