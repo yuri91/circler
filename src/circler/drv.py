@@ -59,7 +59,7 @@ def load_derivations(items: list[Any]) -> dict[str, Derivation]:
         )
         for i in items
     }
-    #filter_cached(drvs)
+    filter_cached(drvs)
     drvMap = {i.drv: drvs[i.name] for i in drvs.values()}
     for i in drvs.values():
         v = drvs[i.name]
