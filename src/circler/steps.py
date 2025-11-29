@@ -113,9 +113,8 @@ def update_pin_and_commit() -> None:
             continue
         parameters[k.removeprefix("CIRCLER_PARAM_")] = v
     revs = []
-    do_merge = True
+    do_merge = branch == "main" or branch == "master"
     if repo != ci_repo:
-        do_merge = branch == "main" or branch == "master"
         revs.append(GitRev(repo, branch, sha))
     for p, b in parameters.items():
         if p.endswith("_branch") and b != "":
