@@ -96,6 +96,7 @@ class Run:
     name: str
     command: str
     shell: str | None = None
+    no_output_timeout: str | None = None
 
 
 @serialize.register
@@ -107,9 +108,11 @@ def _(x: Run) -> dict[str, Any]:
 class Checkout:
     pass
 
+
 @serialize.register
 def _(_: Checkout) -> str:
     return "checkout"
+
 
 type Step = Run | Checkout
 
@@ -122,14 +125,18 @@ class StepsJob:
     environment: dict[str, str] | None = None
     shell: str | None = None
 
+
 class NoOpJob:
     pass
 
+
 @serialize.register
 def _(_: NoOpJob) -> dict[str, Any]:
-    return { "type": "no-op" }
+    return {"type": "no-op"}
+
 
 type Job = StepsJob | NoOpJob
+
 
 @dataclass
 class JobInstance:
@@ -229,15 +236,16 @@ class Pipeline:
             headers={"Accept": "application/json"},
         )
 
-def circler_environment(parameters: dict[str,Parameter]) -> dict[str, str]:
+
+def circler_environment(parameters: dict[str, Parameter]) -> dict[str, str]:
     env = {
-        'CIRCLER_TRIGGER_REPO_URL': '<< pipeline.trigger_parameters.github_app.repo_url >>',
-        'CIRCLER_TRIGGER_REPO_NAME': '<< pipeline.trigger_parameters.github_app.repo_name >>',
-        'CIRCLER_TRIGGER_CHECKOUT_SHA': '<< pipeline.trigger_parameters.github_app.checkout_sha >>',
-        'CIRCLER_TRIGGER_BRANCH': '<< pipeline.trigger_parameters.github_app.branch >>',
-        'CIRCLER_GIT_BRANCH': '<< pipeline.git.branch >>',
-        'CIRCLER_GIT_REV': '<< pipeline.git.revision >>',
-        'CIRCLER_GIT_BRANCH_IS_DEFAULT': '<< pipeline.git.branch.is_default >>',
+        "CIRCLER_TRIGGER_REPO_URL": "<< pipeline.trigger_parameters.github_app.repo_url >>",
+        "CIRCLER_TRIGGER_REPO_NAME": "<< pipeline.trigger_parameters.github_app.repo_name >>",
+        "CIRCLER_TRIGGER_CHECKOUT_SHA": "<< pipeline.trigger_parameters.github_app.checkout_sha >>",
+        "CIRCLER_TRIGGER_BRANCH": "<< pipeline.trigger_parameters.github_app.branch >>",
+        "CIRCLER_GIT_BRANCH": "<< pipeline.git.branch >>",
+        "CIRCLER_GIT_REV": "<< pipeline.git.revision >>",
+        "CIRCLER_GIT_BRANCH_IS_DEFAULT": "<< pipeline.git.branch.is_default >>",
     }
     for p in parameters:
         env[f"CIRCLER_PARAM_{p}"] = f"<< pipeline.parameters.{p} >>"

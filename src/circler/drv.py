@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ class Derivation:
     drv: str
     outputs: dict[str, str]
     deps: list[Derivation]
+    meta: dict[str, Any]
 
 
 def get_safe_name(name: str) -> str:
@@ -42,6 +44,15 @@ def filter_cached(drvs: dict[str, Derivation]) -> None:
             del drvs[d.name]
 
 
+def filter_disabled(drvs: dict[str, Derivation]) -> None:
+    for d in list(drvs.values()):
+        disabled = False
+        with contextlib.suppress(KeyError, TypeError):
+            disabled = d.meta["ci"]["disabled"] is True
+        if disabled:
+            del drvs[d.name]
+
+
 def get_all_deps(drv: str) -> list[str]:
     result = subprocess.run(
         ["nix-store", "--query", "--requisites", drv],
@@ -55,11 +66,16 @@ def get_all_deps(drv: str) -> list[str]:
 def load_derivations(items: list[Any]) -> dict[str, Derivation]:
     drvs = {
         i["attr"]: Derivation(
-            name=i["attr"], drv=i["drvPath"], outputs=i["outputs"], deps=[]
+            name=i["attr"],
+            drv=i["drvPath"],
+            outputs=i["outputs"],
+            deps=[],
+            meta=i["meta"],
         )
         for i in items
     }
     filter_cached(drvs)
+    filter_disabled(drvs)
     drvMap = {i.drv: drvs[i.name] for i in drvs.values()}
     for i in drvs.values():
         v = drvs[i.name]

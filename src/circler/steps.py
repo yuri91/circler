@@ -1,3 +1,4 @@
+import contextlib
 import json
 import os
 from collections.abc import Callable
@@ -108,7 +109,7 @@ def update_pin_and_commit() -> None:
     ci_repo = env["CIRCLE_PROJECT_REPONAME"]
     ci_branch = f"{ci_repo}-{ci_num}"
     parameters: dict[str, str] = {}
-    for k,v in env.items():
+    for k, v in env.items():
         if not k.startswith("CIRCLER_PARAM_"):
             continue
         parameters[k.removeprefix("CIRCLER_PARAM_")] = v
@@ -155,6 +156,7 @@ def nix_eval_jobs(expr: str) -> None:
         verbose=True,
         log_format="raw",
         check_cache_status=True,
+        meta=True,
     )
     items = []
     for line in out.strip().split("\n"):
@@ -266,6 +268,9 @@ def generate_build_job(
     p: Pipeline, executor: DictRef[Executor], drv: Derivation
 ) -> JobInstance:
     shell_path = env["SHELL_PATH"]
+    realize_step = realize_drv.bind(drv.drv)
+    with contextlib.suppress(KeyError, TypeError):
+        realize_step.no_output_timeout = drv.meta["ci"]["no_output_timeout"]
     job = p.job(
         get_safe_name(drv.name),
         StepsJob(
@@ -273,7 +278,7 @@ def generate_build_job(
             shell=shell_path,
             steps=setup_steps(shell_path)
             + [
-                realize_drv.bind(drv.drv),
+                realize_step,
                 cache_drv_outputs.bind(list(drv.outputs.values())),
             ],
         ),
