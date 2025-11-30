@@ -4,8 +4,10 @@
 , nix-eval-jobs
 , attic-client
 , formats
+, self
 }:
 let
+  rev = self.rev or self.dirtyRev or "master";
   pname = "circler";
   version = "0.1.0";
   deps = with python3Packages; [
@@ -105,6 +107,9 @@ python3Packages.buildPythonPackage {
 
   pythonImportsCheck = [ pname ];
 
+  postPatch = ''
+    sed -i 's#GIT_REV = "master"#GIT_REV = "${rev}"#' src/circler/version.py
+  '';
   checkPhase = ''
     runHook preCheck
 

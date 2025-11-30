@@ -18,6 +18,7 @@ from .circleci import (
 )
 from .drv import Derivation, get_safe_name, load_derivations
 from .exec import env, export, sh
+from .version import GIT_REV
 
 
 class CallableRunStep(Run):
@@ -177,9 +178,9 @@ EOF
 shell_bootstrap = Run(
     name="Bootstrap shell",
     shell="/bin/sh",
-    command="""
+    command=f"""
 env | grep CIRCLER
-nix build github:yuri91/circler#python --out-link /tmp/python
+nix build github:yuri91/circler/{GIT_REV}#python --out-link /tmp/python
 """,
 )
 

@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        circler = pkgs.callPackage ./package.nix { };
+        circler = pkgs.callPackage ./package.nix { inherit self; };
       in
       {
         packages.default = circler;
