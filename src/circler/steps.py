@@ -108,7 +108,7 @@ def update_pin_and_commit() -> None:
     sha = env["CIRCLER_TRIGGER_CHECKOUT_SHA"]
     ci_num = env["CIRCLE_BUILD_NUM"]
     ci_repo = env["CIRCLE_PROJECT_REPONAME"]
-    ci_branch = f"{ci_repo}-{ci_num}"
+    ci_branch = f"circleci-{ci_num}"
     parameters: dict[str, str] = {}
     for k, v in env.items():
         if not k.startswith("CIRCLER_PARAM_"):
