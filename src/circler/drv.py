@@ -48,7 +48,7 @@ def filter_disabled(drvs: dict[str, Derivation]) -> None:
     for d in list(drvs.values()):
         disabled = False
         with contextlib.suppress(KeyError, TypeError):
-            disabled = d.meta["ci"]["disabled"] is True
+            disabled = d.meta["ci"]["disable"] is True
         if disabled:
             del drvs[d.name]
 
