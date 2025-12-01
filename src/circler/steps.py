@@ -127,7 +127,7 @@ def update_pin_and_commit() -> None:
     with open("npins/sources.json") as f:
         npins = json.load(f)
     for r in revs:
-        owner = npins[r.repo]["repository"]["owner"]
+        owner = npins["pins"][r.repo]["repository"]["owner"]
         if r.sha:
             sh.npins.add.github(owner, repo, b=r.branch, at=r.sha)
         else:
